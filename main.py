@@ -5,7 +5,6 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from flask import Flask, request
 import os,json
-from time import sleep
 
 
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
@@ -118,21 +117,5 @@ def teste():
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 5001))
     app.run(host='0.0.0.0', port=port)
-
-    #########################
-    #
-    # app = App()
-    # app.login('araujo.lucas', 'cargap10')
-    # app.buscar()
-    # while True:
-    #     app.importDados()
-    #     for cod, livro in app.dados.items():
-    #         print(f"{cod} --  {livro}")
-    #     key = input()
-    #     print(f"Cód: {str(cod)}\tTítulo: {str(livro.getTitulo())}\n"
-    #           f"DataInicial {str(livro.getDataEmp())}"
-    #           f"\tDataEntrega {str(livro.getDataFinal())}"
-    #           f"\n-----------------------------")
-    # # print(app.dados)

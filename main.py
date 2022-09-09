@@ -4,45 +4,12 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from flask import Flask, request
-import os,json
+import os, json
+import Livro
 
+from Livro import Livro
 
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-class Livro:
-    def __init__(self, cod, titulo, dataemp, datafinal):
-        self.cod = cod
-        self.titulo = titulo
-        self.dataemp = dataemp
-        self.datafinal = datafinal
-
-    def fromJson(self, json):
-        self.cod = json['cod']
-        self.titulo = json['titulo']
-        self.dataemp = json['dataemp']
-        self.datafinal = json['datafinal']
-
-    def toJson(self):
-        data = {}
-        data['cod'] = self.cod
-        data['titulo'] = self.titulo
-        data['dataemp'] = self.dataemp
-        data['datafinal'] = self.datafinal
-        return data
-
-    def getCod(self):
-        return self.cod
-
-    def getTitulo(self):
-        return self.titulo
-
-    def getDataEmp(self):
-        return self.dataemp
-
-    def getDataFinal(self):
-        return self.datafinal
-
-
+#teste
 class App:
     def __init__(self):
         self.options = Options()
@@ -55,25 +22,69 @@ class App:
         self.dados = []
         self.ativo = True
 
-    def getSite(self):
+    def getSite(self, url):
         if self.ativo:
-            self.driver.get('https://sigaa.ufma.br/sigaa/verTelaLogin.do')
+            self.driver.get(url)
             return True
         return False
 
     def login(self):
         self.username = self.driver.find_element(By.CSS_SELECTOR, '#usuarioLogin')
         self.password = self.driver.find_element(By.CSS_SELECTOR, '#senhaLogin')
-        with open("credentials.json") as file:
-            data = json.load(file)
-            self.username.send_keys(data["id"])
-            self.password.send_keys(data["pass"])
+        self.username.send_keys('araujo.lucas')
+        self.password.send_keys('cargap10')
         self.driver.find_element(By.CSS_SELECTOR, '#formLogin > input.botao-entrar').click()
 
-    def buscar(self):
-        self.driver.find_element(By.CSS_SELECTOR, '#menu\:formbiblioteca\:menubiblioteca').click()
-        self.driver.find_element(By.CSS_SELECTOR, '#menu\:formbiblioteca\:subMenubib_emprestimos').click()
-        self.driver.find_element(By.CSS_SELECTOR, '#menu\:formbiblioteca\:bib_renovarEmprestimos').click()
+    def buscar_historico(self):
+        self.driver.find_element(By.CSS_SELECTOR,
+                                 '#menu\:formbiblioteca\:menubiblioteca').click()  # abre painel biblioteca
+        self.driver.find_element(By.CSS_SELECTOR,
+                                 '#menu\:formbiblioteca\:subMenubib_emprestimos').click()  # clica em empréstimos
+        self.driver.find_element(By.CSS_SELECTOR,
+                                 '#menu\:formbiblioteca\:bib_historicoEmprestimos').click()  # clica em ver historico
+        dataInicialBuscaHistorico = self.driver.find_element(By.CSS_SELECTOR,
+                                                             '#j_id_jsp_50816789_1\:j_id_jsp_50816789_23')
+        dataInicialBuscaHistorico.clear()  # deixando em branco mostra todos
+        # dataInicialBuscaHistorico.send_keys('10/03/2018')
+        self.driver.find_element(By.CSS_SELECTOR,
+                                 '#j_id_jsp_50816789_1 > table.formulario > tfoot > tr > td > input[type=submit]:nth-child(1)').click()
+
+    def importEmprestimos(self):
+        linhas_pares = self.driver.find_elements(By.CLASS_NAME, 'linhaPar')
+        linhas_impares = self.driver.find_elements(By.CLASS_NAME, 'linhaImpar')
+        # pegar os dois primeiros elemento ,processar, e dar um pop nos 2 primeiros
+        i = 0
+        while (True):
+            try:
+                dataEmp = linhas_pares[i].find_elements(By.TAG_NAME, 'td')[1].text.split(" ")[0]
+                dataFinal = linhas_pares[i].find_elements(By.TAG_NAME, 'td')[3].text.split(" ")[0]
+                status = linhas_pares[i].find_elements(By.TAG_NAME, 'td')[5].text
+                cod = linhas_pares[i + 1].text.split('-')[0].strip()
+                titulo = linhas_pares[i + 1].text.split('-')[1].strip()
+                print(cod, titulo, dataEmp, status)
+                i += 2
+                livro = Livro(cod, titulo, dataEmp, dataFinal, status)
+                self.dados.append(livro.toJson())
+                print('-----')
+            except:
+                break
+        i = 0
+        print("<<<>>>>>")
+        while (True):
+            try:
+                dataEmp = linhas_impares[i].find_elements(By.TAG_NAME, 'td')[1].text.split(" ")[0]
+                dataFinal = linhas_pares[i].find_elements(By.TAG_NAME, 'td')[3].text.split(" ")[0]
+                status = linhas_impares[i].find_elements(By.TAG_NAME, 'td')[5].text
+                cod = linhas_impares[i + 1].text.split('-')[0].strip()
+                titulo = linhas_impares[i + 1].text.split('-')[1].strip()
+                print(cod, titulo, dataEmp, status)
+                i += 2
+                livro = Livro(cod, titulo, dataEmp, dataFinal, status)
+                self.dados.append(livro.toJson())
+                print('-----')
+            except:
+                break
+        self.driver.quit()
 
     def importDados(self):
         dados_gerais = self.driver.find_elements(By.CSS_SELECTOR,
@@ -94,6 +105,14 @@ class App:
         # self.ativo = False
         self.driver.quit()
 
+#
+# app = App()
+# app.getSite('https://sigaa.ufma.br/sigaa/verTelaLogin.do')
+# app.login()
+# app.buscar_historico()
+# app.importEmprestimos()
+# print(app.dados)
+# print(len(app.dados))
 
 app = Flask(__name__)
 
@@ -105,17 +124,15 @@ def hello():
 
 @app.route('/teste', methods=['GET'])
 def teste():
-    app2 = App()
-    entrar = app2.getSite()
-    if entrar:
-        app2.login()
-        app2.buscar()
-        app2.importDados()
-    return app2.dados
+    app = App()
+    app.getSite('https://sigaa.ufma.br/sigaa/verTelaLogin.do')
+    app.login()
+    app.buscar_historico()
+    app.importEmprestimos()
+    return app.dados
 
     # return 'testando 2'
 
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5001))
-    app.run(host='0.0.0.0', port=port)
+port = int(os.environ.get('PORT', 5001))
+app.run(host='0.0.0.0', port=port)
